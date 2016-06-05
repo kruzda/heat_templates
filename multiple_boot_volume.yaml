@@ -4,9 +4,6 @@ description: |
  A resilient, and Highly Available data storage solution backed by Cloud Block 
  Storage, and powered by GlusterFS!
 
-# Todo
-# Change network from rackspace specific to Neutron
-
 parameter_groups:
 
 - label: Server Settings
@@ -67,28 +64,35 @@ parameters:
       Server image used for all servers that are created as a part of this
       deployment
     type: string
-    default: CentOS 7 (PVHVM) (Orchestration)
+    default: "CentOS 7 (PVHVM) (Orchestration)"
     constraints:
     - allowed_values:
-      - CentOS 7 (PVHVM) (Orchestration)
-      - Ubuntu 14.04 LTS (Trusty Tahr) (PVHVM) (Orchestration)
-      description: Must be a supported operating system
+      - "CentOS 7 (PVHVM) (Orchestration)"
+      - "Ubuntu 14.04 LTS (Trusty Tahr) (PVHVM) (Orchestration)"
 
 resources:
-  storage_network:
-    type: Rackspace::Cloud::Network
+  private_net:
+    type: "OS::Neutron::Net"
     properties:
-      label: Storage Network
-      cidr: 192.168.134.0/24
+      name: "Storage Network"
+
+  private_subnet:
+    type: "OS::Neutron::Subnet"
+    properties:
+      network_id: { get_resource: private_net }
+      cidr: "192.168.134.0/24"
+      allocation_pools:
+        - start: "192.168.134.1"
+          end: "192.168.134.254"
 
   ssh_key:
-    type: OS::Nova::KeyPair
+    type: "OS::Nova::KeyPair"
     properties:
       name: { get_param: "OS::stack_id" }
       save_private_key: true
 
   multi-bfv:
-    type: OS::Heat::ResourceGroup
+    type: "OS::Heat::ResourceGroup"
     properties:
       count: { get_param: nodecount } 
       resource_def:
@@ -100,7 +104,7 @@ resources:
           networks:
             - network: 00000000-0000-0000-0000-000000000000
             - network: 11111111-1111-1111-1111-111111111111
-            - network: { get_resource: storage_network }
+            - network: { get_resource: private_net }
           block_device_mapping_v2:
             - device_name: vda
               delete_on_termination: true
